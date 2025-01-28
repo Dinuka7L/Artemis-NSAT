@@ -18,7 +18,7 @@ ARTEMIS is a Network Security Automation Toolkit which is built to automate secu
 ## Authors
 
 - [@Dinuka7L](https://github.com/Dinuka7L)
-- [@TharinsaAmbepitiya](https://github.com/nTharinsaAmbepitiya))
-- [@Seruwam](https://github.com/Seruwam))
-- [@ndfernand](https://github.com/ndfernand))
+- [@TharinsaAmbepitiya](https://github.com/nTharinsaAmbepitiya)
+- [@Seruwam](https://github.com/Seruwam)
+- [@ndfernand](https://github.com/ndfernand)
 
