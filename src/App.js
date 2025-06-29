@@ -7,6 +7,7 @@ import DeviceConfiguration from './pages/DeviceConfiguration';
 import AttackMitigation from './pages/AttackMitigation';
 import FrameworkControls from './pages/FrameworkControls';
 import NetworkCompliance from './pages/NetworkCompliance';
+import Automation from './pages/Automation';
 import Reports from './pages/Reports';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
           <Route path="/attack-mitigation" element={<AttackMitigation />} />
           <Route path="/framework-controls" element={<FrameworkControls />} />
           <Route path="/network-compliance" element={<NetworkCompliance />} />
+          <Route path="/automation" element={<Automation />} />
           <Route path="/reports" element={<Reports />} />
         </Routes>
       </Layout>

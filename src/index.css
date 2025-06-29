@@ -11,8 +11,19 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Light theme (default) */
+body {
   background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
   min-height: 100vh;
+}
+
+/* Dark theme */
+.dark body {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #e2e8f0;
 }
 
 code {
@@ -23,10 +34,20 @@ code {
   background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
 }
 
+.dark .artemis-gradient {
+  background: linear-gradient(135deg, #ff6b35 0%, #e55a2b 100%);
+}
+
 .artemis-card {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark .artemis-card {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 107, 53, 0.2);
 }
 
 .artemis-button {
@@ -37,6 +58,10 @@ code {
 .artemis-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.dark .artemis-button:hover {
+  box-shadow: 0 10px 25px rgba(255, 107, 53, 0.3);
 }
 
 .terminal-output {
@@ -52,6 +77,12 @@ code {
   overflow-y: auto;
 }
 
+.dark .terminal-output {
+  background: #0f172a;
+  color: #ff6b35;
+  border: 1px solid #ff6b35;
+}
+
 .loading-spinner {
   border: 3px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
@@ -59,6 +90,11 @@ code {
   width: 24px;
   height: 24px;
   animation: spin 1s linear infinite;
+}
+
+.dark .loading-spinner {
+  border: 3px solid rgba(255, 107, 53, 0.3);
+  border-top: 3px solid #ff6b35;
 }
 
 @keyframes spin {
@@ -93,11 +129,131 @@ code {
   background: #1f2937;
 }
 
+.dark ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
 ::-webkit-scrollbar-thumb {
   background: #4b5563;
   border-radius: 4px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #ff6b35;
+  border-radius: 4px;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #6b7280;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #ff8c42;
+}
+
+/* Dark theme specific styles */
+.dark .bg-white {
+  background-color: #1e293b !important;
+}
+
+.dark .bg-gray-50 {
+  background-color: #0f172a !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: #334155 !important;
+}
+
+.dark .text-gray-900 {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-gray-600 {
+  color: #94a3b8 !important;
+}
+
+.dark .text-gray-500 {
+  color: #64748b !important;
+}
+
+.dark .border-gray-200 {
+  border-color: #475569 !important;
+}
+
+.dark .border-gray-300 {
+  border-color: #64748b !important;
+}
+
+.dark .hover\:bg-gray-50:hover {
+  background-color: #334155 !important;
+}
+
+.dark .hover\:bg-gray-700:hover {
+  background-color: #475569 !important;
+}
+
+/* Orange accent for dark theme */
+.dark .text-blue-600 {
+  color: #ff6b35 !important;
+}
+
+.dark .text-blue-700 {
+  color: #e55a2b !important;
+}
+
+.dark .bg-blue-100 {
+  background-color: rgba(255, 107, 53, 0.1) !important;
+}
+
+.dark .text-blue-800 {
+  color: #ff8c42 !important;
+}
+
+.dark .border-blue-500 {
+  border-color: #ff6b35 !important;
+}
+
+.dark .bg-blue-50 {
+  background-color: rgba(255, 107, 53, 0.05) !important;
+}
+
+.dark .focus\:ring-blue-500:focus {
+  --tw-ring-color: #ff6b35 !important;
+}
+
+.dark .focus\:ring-red-500:focus {
+  --tw-ring-color: #ff6b35 !important;
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dark .theme-toggle {
+  background: rgba(255, 107, 53, 0.1);
+  border: 1px solid rgba(255, 107, 53, 0.3);
+}
+
+.theme-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.dark .theme-toggle:hover {
+  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
 }
