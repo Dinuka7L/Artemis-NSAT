@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sun, Moon } from 'lucide-react';
 
-const ThemeToggle = () => {
+const ThemeToggle = ({ className = '' }) => {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -31,13 +31,19 @@ const ThemeToggle = () => {
   return (
     <button
       onClick={toggleTheme}
-      className="theme-toggle"
+      className={`footer-theme-toggle ${className}`}
       title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
     >
       {isDark ? (
-        <Sun className="w-5 h-5 text-dark-orange" />
+        <>
+          <Sun className="w-4 h-4 text-orange-400 mr-2" />
+          <span className="text-sm text-gray-300">Light Mode</span>
+        </>
       ) : (
-        <Moon className="w-5 h-5 text-white" />
+        <>
+          <Moon className="w-4 h-4 text-gray-600 mr-2" />
+          <span className="text-sm text-gray-600">Dark Mode</span>
+        </>
       )}
     </button>
   );

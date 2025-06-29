@@ -20,9 +20,9 @@ module.exports = {
           secondary: '#1e293b',  // Dark blue
           accent: '#334155',     // Medium dark blue
           surface: '#475569',    // Light dark blue
-          orange: '#ff6b35',     // Electric orange
-          'orange-light': '#ff8c42', // Lighter electric orange
-          'orange-dark': '#e55a2b',  // Darker electric orange
+          orange: '#e55a2b',     // Darker electric orange
+          'orange-light': '#ff6b35', // Medium electric orange
+          'orange-dark': '#cc4a1f',  // Very dark electric orange
         }
       },
       fontFamily: {
