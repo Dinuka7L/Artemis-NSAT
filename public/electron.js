@@ -55,13 +55,21 @@ app.on('activate', () => {
   }
 });
 
-// Python bridge functions
+// Enhanced Python bridge functions
 ipcMain.handle('execute-python-script', async (event, scriptPath, args = []) => {
   return new Promise((resolve, reject) => {
     const pythonPath = process.platform === 'win32' ? 'python' : 'python3';
     const fullScriptPath = path.join(__dirname, '..', scriptPath);
     
-    const pythonProcess = spawn(pythonPath, [fullScriptPath, ...args], {
+    // Enhanced argument processing for configuration data
+    const processedArgs = args.map(arg => {
+      if (typeof arg === 'object') {
+        return JSON.stringify(arg);
+      }
+      return arg.toString();
+    });
+    
+    const pythonProcess = spawn(pythonPath, [fullScriptPath, ...processedArgs], {
       cwd: path.join(__dirname, '..')
     });
 
@@ -78,14 +86,29 @@ ipcMain.handle('execute-python-script', async (event, scriptPath, args = []) => 
 
     pythonProcess.on('close', (code) => {
       if (code === 0) {
-        resolve({ success: true, output, error });
+        resolve({ 
+          success: true, 
+          output, 
+          error,
+          exitCode: code
+        });
       } else {
-        reject({ success: false, output, error, code });
+        reject({ 
+          success: false, 
+          output, 
+          error, 
+          exitCode: code 
+        });
       }
     });
 
     pythonProcess.on('error', (err) => {
-      reject({ success: false, error: err.message });
+      reject({ 
+        success: false, 
+        error: err.message,
+        output: '',
+        exitCode: -1
+      });
     });
   });
 });

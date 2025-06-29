@@ -80,7 +80,7 @@ class PythonBridge {
       'device_config/network_configuration_manager.py': {
         success: true,
         output: `Device Configuration Retrieved Successfully
-Device: Router-1 (192.168.1.1)
+Device: ${args[0] || 'Router-1'} (${args[0] || '192.168.1.1'})
 Status: Connected
 Telnet: Disabled
 SSH: Enabled (v2)
@@ -92,8 +92,8 @@ Exec Timeout: 10 minutes
 
 Configuration retrieval completed.`,
         parsedData: {
-          device: 'Router-1',
-          ip: '192.168.1.1',
+          device: args[0] || 'Router-1',
+          ip: args[0] || '192.168.1.1',
           telnet: 'Disabled',
           ssh: 'Enabled (v2)',
           passwordEncryption: 'Enabled',
@@ -103,10 +103,54 @@ Configuration retrieval completed.`,
           execTimeout: '10 minutes'
         }
       },
+      'device_config/device_control.py': {
+        success: true,
+        output: `Device Configuration Applied Successfully
+Device: ${args[0] || 'Router-1'} (${args[0] || '192.168.1.1'})
+Status: Connected
+
+Applying Configuration Controls:
+${args[1] ? args[1].split(',').map(id => {
+  const controlNames = {
+    '1': '✓ Telnet disabled successfully',
+    '2': '✓ Password encryption enabled',
+    '3': '✓ Enable secret configured',
+    '4': '✓ Port security configured on specified interface',
+    '5': '✓ MOTD banner configured',
+    '6': '✓ Exec timeout configured',
+    '7': '✓ Syslog server configured',
+    '8': '✓ BPDU Guard enabled on specified interfaces',
+    '9': '✓ Root Guard enabled on specified interfaces',
+    '10': '✓ Interface administratively shut down',
+    '11': '✓ Interface activated',
+    '12': '✓ DTP disabled on interface',
+    '13': '✓ CDP disabled',
+    '14': '✓ DHCP Snooping configured',
+    '15': '✓ Dynamic ARP Inspection enabled',
+    '16': '✓ Login block configured'
+  };
+  return controlNames[id] || `✓ Control ${id} applied`;
+}).join('\n') : '✓ Default configuration applied'}
+
+Configuration deployment completed successfully.
+${args[1] ? args[1].split(',').length : 1} security controls applied.
+
+${args[2] ? `Configuration Parameters Applied:
+${JSON.stringify(JSON.parse(args[2]), null, 2)}` : ''}`,
+        parsedData: {
+          device: args[0] || 'Router-1',
+          controlsApplied: args[1] ? args[1].split(',').length : 1,
+          configurationData: args[2] ? JSON.parse(args[2]) : null,
+          results: args[1] ? args[1].split(',').map(id => ({
+            control: `Control ${id}`,
+            status: 'Success'
+          })) : [{ control: 'Default Control', status: 'Success' }]
+        }
+      },
       'device_config/attack_mitigation.py': {
         success: true,
         output: `Attack Mitigation Deployment Started
-Device: Router-1 (192.168.1.1)
+Device: ${args[0] || 'Router-1'} (${args[0] || '192.168.1.1'})
 Status: Connected
 
 Applying Security Controls:
@@ -119,7 +163,7 @@ Applying Security Controls:
 Attack mitigation deployment completed successfully.
 5 security controls applied.`,
         parsedData: {
-          device: 'Router-1',
+          device: args[0] || 'Router-1',
           controlsApplied: 5,
           results: [
             { control: 'Disable Telnet', status: 'Success' },
@@ -196,9 +240,9 @@ Report generated: compliance_report_${new Date().toISOString().slice(0,19).repla
       'device_config/framework_controls.py': {
         success: true,
         output: `Framework Control Application Started
-Device: Router-1 (192.168.1.1)
+Device: ${args[0] || 'Router-1'} (${args[0] || '192.168.1.1'})
 Framework: NIST SP 800-53
-Control: AC-6-3 (Network Access to Privileged Commands)
+Control: ${args[1] || 'AC-6-3'} (Network Access to Privileged Commands)
 
 Applying control requirements:
 ✓ Enable secret configured
@@ -206,12 +250,12 @@ Applying control requirements:
 ✓ SSH v2 enabled and configured
 ✓ Privileged access restrictions applied
 
-Framework control AC-6-3 applied successfully.
+Framework control ${args[1] || 'AC-6-3'} applied successfully.
 Device compliance improved.`,
         parsedData: {
-          device: 'Router-1',
+          device: args[0] || 'Router-1',
           framework: 'NIST SP 800-53',
-          control: 'AC-6-3',
+          control: args[1] || 'AC-6-3',
           controlName: 'Network Access to Privileged Commands',
           requirements: [
             { requirement: 'Enable secret configured', status: 'Success' },
@@ -313,6 +357,9 @@ Device compliance improved.`,
       }
       if (parsedData.overallScore) {
         formatted += `Compliance Score: ${parsedData.overallScore}%\n`;
+      }
+      if (parsedData.configurationData) {
+        formatted += `Configuration Parameters: ${JSON.stringify(parsedData.configurationData, null, 2)}\n`;
       }
     }
 
