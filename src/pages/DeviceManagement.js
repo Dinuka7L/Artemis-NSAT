@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import { Network, Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
-
-const ipcRenderer = window.require ? window.require('electron').ipcRenderer : null;
+import pythonBridge from '../utils/pythonBridge';
 
 const DeviceManagement = () => {
   const [devices, setDevices] = useState([]);
@@ -26,34 +25,11 @@ const DeviceManagement = () => {
   const loadDevices = async () => {
     try {
       setLoading(true);
-      if (ipcRenderer) {
-        const result = await ipcRenderer.invoke('get-devices');
-        if (result && !result.error) {
-          setDevices(result);
-        }
-      } else {
-        // Mock data for browser environment
-        setDevices([
-          { 
-            devicename: 'Router-1', 
-            ip: '192.168.1.1', 
-            device_category: 'router',
-            username: 'admin',
-            password: 'password123',
-            enable_secret: 'secret123'
-          },
-          { 
-            devicename: 'Switch-1', 
-            ip: '192.168.1.2', 
-            device_category: 'switch',
-            username: 'admin',
-            password: 'password456',
-            enable_secret: 'secret456'
-          }
-        ]);
-      }
+      const deviceList = await pythonBridge.getDevices();
+      setDevices(deviceList);
     } catch (error) {
       console.error('Error loading devices:', error);
+      setDevices([]);
     } finally {
       setLoading(false);
     }
@@ -63,25 +39,9 @@ const DeviceManagement = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      if (ipcRenderer) {
-        const result = await ipcRenderer.invoke('save-device', formData);
-        if (result.success) {
-          setShowAddForm(false);
-          setFormData({
-            ip: '',
-            devicename: '',
-            device_category: 'router',
-            username: '',
-            password: '',
-            enable_secret: ''
-          });
-          await loadDevices();
-        } else {
-          alert('Error saving device: ' + result.error);
-        }
-      } else {
-        // Mock save for browser environment
-        alert('Device would be saved in Electron environment');
+      const result = await pythonBridge.saveDevice(formData);
+      
+      if (result.success) {
         setShowAddForm(false);
         setFormData({
           ip: '',
@@ -91,6 +51,9 @@ const DeviceManagement = () => {
           password: '',
           enable_secret: ''
         });
+        await loadDevices();
+      } else {
+        alert('Error saving device: ' + result.error);
       }
     } catch (error) {
       console.error('Error saving device:', error);
@@ -110,11 +73,11 @@ const DeviceManagement = () => {
   const getDeviceIcon = (category) => {
     const iconClass = "w-5 h-5";
     switch (category) {
-      case 'router': return <Network className={`${iconClass} text-blue-600`} />;
-      case 'switch': return <Network className={`${iconClass} text-green-600`} />;
-      case 'firewall': return <Network className={`${iconClass} text-red-600`} />;
-      case 'server': return <Network className={`${iconClass} text-purple-600`} />;
-      default: return <Network className={`${iconClass} text-gray-600`} />;
+      case 'router': return <Network className={`${iconClass} text-blue-600 dark:text-blue-400`} />;
+      case 'switch': return <Network className={`${iconClass} text-green-600 dark:text-green-400`} />;
+      case 'firewall': return <Network className={`${iconClass} text-red-600 dark:text-red-400`} />;
+      case 'server': return <Network className={`${iconClass} text-purple-600 dark:text-purple-400`} />;
+      default: return <Network className={`${iconClass} text-gray-600 dark:text-gray-400`} />;
     }
   };
 
@@ -122,8 +85,8 @@ const DeviceManagement = () => {
     <div className="space-y-6 fade-in">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Device Management</h1>
-          <p className="text-gray-600 mt-2">Manage your network devices and credentials</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Device Management</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your network devices and credentials</p>
         </div>
         <Button onClick={() => setShowAddForm(true)} className="flex items-center space-x-2">
           <Plus className="w-4 h-4" />
@@ -133,17 +96,17 @@ const DeviceManagement = () => {
 
       {/* Add Device Form */}
       {showAddForm && (
-        <Card title="Add New Device" className="border-l-4 border-l-blue-500">
+        <Card title="Add New Device" className="border-l-4 border-l-blue-500 dark:border-l-dark-orange">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Device Category
                 </label>
                 <select
                   value={formData.device_category}
                   onChange={(e) => setFormData({...formData, device_category: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-accent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-orange bg-white dark:bg-dark-secondary text-gray-900 dark:text-white"
                   required
                 >
                   <option value="router">Router</option>
@@ -154,70 +117,70 @@ const DeviceManagement = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   IP Address
                 </label>
                 <input
                   type="text"
                   value={formData.ip}
                   onChange={(e) => setFormData({...formData, ip: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-accent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-orange bg-white dark:bg-dark-secondary text-gray-900 dark:text-white"
                   placeholder="192.168.1.1"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Device Name
                 </label>
                 <input
                   type="text"
                   value={formData.devicename}
                   onChange={(e) => setFormData({...formData, devicename: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-accent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-orange bg-white dark:bg-dark-secondary text-gray-900 dark:text-white"
                   placeholder="Main Router"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Username
                 </label>
                 <input
                   type="text"
                   value={formData.username}
                   onChange={(e) => setFormData({...formData, username: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-accent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-orange bg-white dark:bg-dark-secondary text-gray-900 dark:text-white"
                   placeholder="admin"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Password
                 </label>
                 <input
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-accent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-orange bg-white dark:bg-dark-secondary text-gray-900 dark:text-white"
                   placeholder="••••••••"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Enable Secret
                 </label>
                 <input
                   type="password"
                   value={formData.enable_secret}
                   onChange={(e) => setFormData({...formData, enable_secret: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-accent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-dark-orange bg-white dark:bg-dark-secondary text-gray-900 dark:text-white"
                   placeholder="••••••••"
                   required
                 />
@@ -245,73 +208,73 @@ const DeviceManagement = () => {
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="loading-spinner mr-2" />
-            <span>Loading devices...</span>
+            <span className="text-gray-600 dark:text-gray-400">Loading devices...</span>
           </div>
         ) : devices.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-accent">
+              <thead className="bg-gray-50 dark:bg-dark-accent">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Device
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     IP Address
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Category
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Username
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Password
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Enable Secret
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-dark-secondary divide-y divide-gray-200 dark:divide-dark-accent">
                 {devices.map((device, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
+                  <tr key={index} className="hover:bg-gray-50 dark:hover:bg-dark-accent">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         {getDeviceIcon(device.device_category)}
                         <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {device.devicename}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {device.ip}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        device.device_category === 'router' ? 'bg-blue-100 text-blue-800' :
-                        device.device_category === 'switch' ? 'bg-green-100 text-green-800' :
-                        device.device_category === 'firewall' ? 'bg-red-100 text-red-800' :
-                        'bg-purple-100 text-purple-800'
+                        device.device_category === 'router' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                        device.device_category === 'switch' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                        device.device_category === 'firewall' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                        'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
                       }`}>
                         {device.device_category}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {device.username}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       <div className="flex items-center space-x-2">
                         <span className="font-mono">
                           {showPasswords[`${index}_password`] ? device.password : '••••••••'}
                         </span>
                         <button
                           onClick={() => togglePasswordVisibility(index, 'password')}
-                          className="text-gray-400 hover:text-gray-600"
+                          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                         >
                           {showPasswords[`${index}_password`] ? 
                             <EyeOff className="w-4 h-4" /> : 
@@ -320,14 +283,14 @@ const DeviceManagement = () => {
                         </button>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       <div className="flex items-center space-x-2">
                         <span className="font-mono">
                           {showPasswords[`${index}_secret`] ? device.enable_secret : '••••••••'}
                         </span>
                         <button
                           onClick={() => togglePasswordVisibility(index, 'secret')}
-                          className="text-gray-400 hover:text-gray-600"
+                          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                         >
                           {showPasswords[`${index}_secret`] ? 
                             <EyeOff className="w-4 h-4" /> : 
@@ -338,7 +301,7 @@ const DeviceManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button className="text-blue-600 hover:text-blue-900">
+                        <button className="text-blue-600 dark:text-dark-orange hover:text-blue-900 dark:hover:text-dark-orange-light">
                           <Edit className="w-4 h-4" />
                         </button>
                         <button className="text-red-600 hover:text-red-900">
@@ -353,8 +316,8 @@ const DeviceManagement = () => {
           </div>
         ) : (
           <div className="text-center py-8">
-            <Network className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 mb-4">No devices configured yet</p>
+            <Network className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 mb-4">No devices configured yet</p>
             <Button onClick={() => setShowAddForm(true)}>
               Add Your First Device
             </Button>
