@@ -4,7 +4,7 @@ import Button from '../components/Button';
 import Terminal from '../components/Terminal';
 import { BarChart3, Play, Download, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
-const { ipcRenderer } = window.require('electron');
+const ipcRenderer = window.require ? window.require('electron').ipcRenderer : null;
 
 const NetworkCompliance = () => {
   const [devices, setDevices] = useState([]);
@@ -38,9 +38,17 @@ const NetworkCompliance = () => {
 
   const loadDevices = async () => {
     try {
-      const result = await ipcRenderer.invoke('get-devices');
-      if (result && !result.error) {
-        setDevices(result);
+      if (ipcRenderer) {
+        const result = await ipcRenderer.invoke('get-devices');
+        if (result && !result.error) {
+          setDevices(result);
+        }
+      } else {
+        // Mock data for browser environment
+        setDevices([
+          { devicename: 'Router-1', ip: '192.168.1.1', device_category: 'router' },
+          { devicename: 'Switch-1', ip: '192.168.1.2', device_category: 'switch' }
+        ]);
       }
     } catch (error) {
       console.error('Error loading devices:', error);
@@ -73,25 +81,41 @@ const NetworkCompliance = () => {
       setLoading(true);
       setOutput('Starting compliance check...\n');
 
-      const result = await ipcRenderer.invoke('execute-python-script', 
-        'network_compliance/check_compliance.py', 
-        [selectedDevices.join(','), selectedControls.join(',')]
-      );
+      if (ipcRenderer) {
+        const result = await ipcRenderer.invoke('execute-python-script', 
+          'network_compliance/check_compliance.py', 
+          [selectedDevices.join(','), selectedControls.join(',')]
+        );
 
-      if (result.success) {
-        setOutput(prev => prev + result.output);
-        // Parse compliance results if available
-        try {
-          const resultsMatch = result.output.match(/COMPLIANCE_RESULTS:(.*?)END_RESULTS/s);
-          if (resultsMatch) {
-            const complianceData = JSON.parse(resultsMatch[1]);
-            setComplianceResults(complianceData);
+        if (result.success) {
+          setOutput(prev => prev + result.output);
+          // Parse compliance results if available
+          try {
+            const resultsMatch = result.output.match(/COMPLIANCE_RESULTS:(.*?)END_RESULTS/s);
+            if (resultsMatch) {
+              const complianceData = JSON.parse(resultsMatch[1]);
+              setComplianceResults(complianceData);
+            }
+          } catch (e) {
+            console.log('Could not parse compliance results');
           }
-        } catch (e) {
-          console.log('Could not parse compliance results');
+        } else {
+          setOutput(prev => prev + `Error: ${result.error}\n`);
         }
       } else {
-        setOutput(prev => prev + `Error: ${result.error}\n`);
+        // Mock response for browser environment
+        setOutput(prev => prev + 'Mock: Compliance check would be executed in Electron environment\n');
+        // Mock compliance results
+        setComplianceResults({
+          overallScore: 85,
+          passedControls: 12,
+          failedControls: 3,
+          deviceResults: [
+            { device: 'Router-1', control: 'Telnet Disabled', status: 'Pass', score: 100 },
+            { device: 'Router-1', control: 'SSH V2 Enabled', status: 'Fail', score: 0 },
+            { device: 'Switch-1', control: 'Port Security', status: 'Pass', score: 100 }
+          ]
+        });
       }
     } catch (error) {
       setOutput(prev => prev + `Error: ${error.message}\n`);
@@ -108,15 +132,20 @@ const NetworkCompliance = () => {
 
     try {
       setLoading(true);
-      const result = await ipcRenderer.invoke('execute-python-script', 
-        'network_compliance/check_compliance.py', 
-        [selectedDevices.join(','), 'generate_report']
-      );
+      if (ipcRenderer) {
+        const result = await ipcRenderer.invoke('execute-python-script', 
+          'network_compliance/check_compliance.py', 
+          [selectedDevices.join(','), 'generate_report']
+        );
 
-      if (result.success) {
-        setOutput(prev => prev + 'Compliance report generated successfully!\n' + result.output);
+        if (result.success) {
+          setOutput(prev => prev + 'Compliance report generated successfully!\n' + result.output);
+        } else {
+          setOutput(prev => prev + `Error generating report: ${result.error}\n`);
+        }
       } else {
-        setOutput(prev => prev + `Error generating report: ${result.error}\n`);
+        // Mock response for browser environment
+        setOutput(prev => prev + 'Mock: Compliance report would be generated in Electron environment\n');
       }
     } catch (error) {
       setOutput(prev => prev + `Error: ${error.message}\n`);

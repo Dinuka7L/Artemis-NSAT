@@ -4,7 +4,7 @@ import Button from '../components/Button';
 import Terminal from '../components/Terminal';
 import { Settings, Play, Download } from 'lucide-react';
 
-const { ipcRenderer } = window.require('electron');
+const ipcRenderer = window.require ? window.require('electron').ipcRenderer : null;
 
 const DeviceConfiguration = () => {
   const [devices, setDevices] = useState([]);
@@ -60,9 +60,17 @@ const DeviceConfiguration = () => {
 
   const loadDevices = async () => {
     try {
-      const result = await ipcRenderer.invoke('get-devices');
-      if (result && !result.error) {
-        setDevices(result);
+      if (ipcRenderer) {
+        const result = await ipcRenderer.invoke('get-devices');
+        if (result && !result.error) {
+          setDevices(result);
+        }
+      } else {
+        // Mock data for browser environment
+        setDevices([
+          { devicename: 'Router-1', ip: '192.168.1.1', device_category: 'router' },
+          { devicename: 'Switch-1', ip: '192.168.1.2', device_category: 'switch' }
+        ]);
       }
     } catch (error) {
       console.error('Error loading devices:', error);
@@ -87,19 +95,24 @@ const DeviceConfiguration = () => {
       setLoading(true);
       setOutput('Starting configuration...\n');
 
-      const scriptPath = mode === 'retrieve' 
-        ? 'device_config/network_configuration_manager.py'
-        : 'device_config/device_control.py';
+      if (ipcRenderer) {
+        const scriptPath = mode === 'retrieve' 
+          ? 'device_config/network_configuration_manager.py'
+          : 'device_config/device_control.py';
 
-      const result = await ipcRenderer.invoke('execute-python-script', scriptPath, [
-        selectedDevice,
-        selectedControls.join(',')
-      ]);
+        const result = await ipcRenderer.invoke('execute-python-script', scriptPath, [
+          selectedDevice,
+          selectedControls.join(',')
+        ]);
 
-      if (result.success) {
-        setOutput(prev => prev + result.output);
+        if (result.success) {
+          setOutput(prev => prev + result.output);
+        } else {
+          setOutput(prev => prev + `Error: ${result.error}\n`);
+        }
       } else {
-        setOutput(prev => prev + `Error: ${result.error}\n`);
+        // Mock response for browser environment
+        setOutput(prev => prev + `Mock: ${mode === 'retrieve' ? 'Configuration retrieval' : 'Configuration application'} would be executed in Electron environment\n`);
       }
     } catch (error) {
       setOutput(prev => prev + `Error: ${error.message}\n`);
@@ -116,15 +129,20 @@ const DeviceConfiguration = () => {
 
     try {
       setLoading(true);
-      const result = await ipcRenderer.invoke('execute-python-script', 
-        'device_config/network_configuration_manager.py', 
-        [selectedDevice, 'generate_report']
-      );
+      if (ipcRenderer) {
+        const result = await ipcRenderer.invoke('execute-python-script', 
+          'device_config/network_configuration_manager.py', 
+          [selectedDevice, 'generate_report']
+        );
 
-      if (result.success) {
-        setOutput(prev => prev + 'Report generated successfully!\n' + result.output);
+        if (result.success) {
+          setOutput(prev => prev + 'Report generated successfully!\n' + result.output);
+        } else {
+          setOutput(prev => prev + `Error generating report: ${result.error}\n`);
+        }
       } else {
-        setOutput(prev => prev + `Error generating report: ${result.error}\n`);
+        // Mock response for browser environment
+        setOutput(prev => prev + 'Mock: Report would be generated in Electron environment\n');
       }
     } catch (error) {
       setOutput(prev => prev + `Error: ${error.message}\n`);

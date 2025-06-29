@@ -3,7 +3,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import { Network, Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
 
-const { ipcRenderer } = window.require('electron');
+const ipcRenderer = window.require ? window.require('electron').ipcRenderer : null;
 
 const DeviceManagement = () => {
   const [devices, setDevices] = useState([]);
@@ -26,9 +26,31 @@ const DeviceManagement = () => {
   const loadDevices = async () => {
     try {
       setLoading(true);
-      const result = await ipcRenderer.invoke('get-devices');
-      if (result && !result.error) {
-        setDevices(result);
+      if (ipcRenderer) {
+        const result = await ipcRenderer.invoke('get-devices');
+        if (result && !result.error) {
+          setDevices(result);
+        }
+      } else {
+        // Mock data for browser environment
+        setDevices([
+          { 
+            devicename: 'Router-1', 
+            ip: '192.168.1.1', 
+            device_category: 'router',
+            username: 'admin',
+            password: 'password123',
+            enable_secret: 'secret123'
+          },
+          { 
+            devicename: 'Switch-1', 
+            ip: '192.168.1.2', 
+            device_category: 'switch',
+            username: 'admin',
+            password: 'password456',
+            enable_secret: 'secret456'
+          }
+        ]);
       }
     } catch (error) {
       console.error('Error loading devices:', error);
@@ -41,8 +63,25 @@ const DeviceManagement = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      const result = await ipcRenderer.invoke('save-device', formData);
-      if (result.success) {
+      if (ipcRenderer) {
+        const result = await ipcRenderer.invoke('save-device', formData);
+        if (result.success) {
+          setShowAddForm(false);
+          setFormData({
+            ip: '',
+            devicename: '',
+            device_category: 'router',
+            username: '',
+            password: '',
+            enable_secret: ''
+          });
+          await loadDevices();
+        } else {
+          alert('Error saving device: ' + result.error);
+        }
+      } else {
+        // Mock save for browser environment
+        alert('Device would be saved in Electron environment');
         setShowAddForm(false);
         setFormData({
           ip: '',
@@ -52,9 +91,6 @@ const DeviceManagement = () => {
           password: '',
           enable_secret: ''
         });
-        await loadDevices();
-      } else {
-        alert('Error saving device: ' + result.error);
       }
     } catch (error) {
       console.error('Error saving device:', error);

@@ -14,7 +14,7 @@ import {
   Lock
 } from 'lucide-react';
 
-const { ipcRenderer } = window.require('electron');
+const ipcRenderer = window.require ? window.require('electron').ipcRenderer : null;
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -35,10 +35,20 @@ const Dashboard = () => {
   const loadDevices = async () => {
     try {
       setLoading(true);
-      const result = await ipcRenderer.invoke('get-devices');
-      if (result && !result.error) {
-        setDevices(result);
-        calculateStats(result);
+      if (ipcRenderer) {
+        const result = await ipcRenderer.invoke('get-devices');
+        if (result && !result.error) {
+          setDevices(result);
+          calculateStats(result);
+        }
+      } else {
+        // Mock data for browser environment
+        const mockDevices = [
+          { devicename: 'Router-1', ip: '192.168.1.1', device_category: 'router' },
+          { devicename: 'Switch-1', ip: '192.168.1.2', device_category: 'switch' }
+        ];
+        setDevices(mockDevices);
+        calculateStats(mockDevices);
       }
     } catch (error) {
       console.error('Error loading devices:', error);

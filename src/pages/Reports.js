@@ -3,7 +3,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import { FileText, Download, Eye, Calendar, BarChart3 } from 'lucide-react';
 
-const { ipcRenderer } = window.require('electron');
+const ipcRenderer = window.require ? window.require('electron').ipcRenderer : null;
 
 const Reports = () => {
   const [reports, setReports] = useState([]);
@@ -50,25 +50,30 @@ const Reports = () => {
     try {
       setLoading(true);
       
-      let scriptPath = '';
-      switch (reportType) {
-        case 'posture':
-          scriptPath = 'device_config/network_configuration_manager.py';
-          break;
-        case 'compliance':
-          scriptPath = 'network_compliance/check_compliance.py';
-          break;
-        default:
-          return;
-      }
+      if (ipcRenderer) {
+        let scriptPath = '';
+        switch (reportType) {
+          case 'posture':
+            scriptPath = 'device_config/network_configuration_manager.py';
+            break;
+          case 'compliance':
+            scriptPath = 'network_compliance/check_compliance.py';
+            break;
+          default:
+            return;
+        }
 
-      const result = await ipcRenderer.invoke('execute-python-script', scriptPath, ['generate_report']);
-      
-      if (result.success) {
-        alert('Report generated successfully!');
-        loadReports(); // Refresh the reports list
+        const result = await ipcRenderer.invoke('execute-python-script', scriptPath, ['generate_report']);
+        
+        if (result.success) {
+          alert('Report generated successfully!');
+          loadReports(); // Refresh the reports list
+        } else {
+          alert('Error generating report: ' + result.error);
+        }
       } else {
-        alert('Error generating report: ' + result.error);
+        // Mock response for browser environment
+        alert('Report would be generated in Electron environment');
       }
     } catch (error) {
       alert('Error: ' + error.message);
@@ -79,17 +84,22 @@ const Reports = () => {
 
   const openReport = async (reportName) => {
     try {
-      const result = await ipcRenderer.invoke('show-open-dialog', {
-        defaultPath: `./reports/${reportName}`,
-        filters: [
-          { name: 'PDF Files', extensions: ['pdf'] }
-        ]
-      });
+      if (ipcRenderer) {
+        const result = await ipcRenderer.invoke('show-open-dialog', {
+          defaultPath: `./reports/${reportName}`,
+          filters: [
+            { name: 'PDF Files', extensions: ['pdf'] }
+          ]
+        });
 
-      if (!result.canceled && result.filePaths.length > 0) {
-        // Open the PDF file with the default system application
-        const { shell } = window.require('electron');
-        shell.openPath(result.filePaths[0]);
+        if (!result.canceled && result.filePaths.length > 0) {
+          // Open the PDF file with the default system application
+          const { shell } = window.require('electron');
+          shell.openPath(result.filePaths[0]);
+        }
+      } else {
+        // Mock response for browser environment
+        alert('Report would be opened in Electron environment');
       }
     } catch (error) {
       console.error('Error opening report:', error);
@@ -98,16 +108,21 @@ const Reports = () => {
 
   const downloadReport = async (reportName) => {
     try {
-      const result = await ipcRenderer.invoke('show-save-dialog', {
-        defaultPath: reportName,
-        filters: [
-          { name: 'PDF Files', extensions: ['pdf'] }
-        ]
-      });
+      if (ipcRenderer) {
+        const result = await ipcRenderer.invoke('show-save-dialog', {
+          defaultPath: reportName,
+          filters: [
+            { name: 'PDF Files', extensions: ['pdf'] }
+          ]
+        });
 
-      if (!result.canceled) {
-        // Copy the file to the selected location
-        alert('Report saved to: ' + result.filePath);
+        if (!result.canceled) {
+          // Copy the file to the selected location
+          alert('Report saved to: ' + result.filePath);
+        }
+      } else {
+        // Mock response for browser environment
+        alert('Report would be downloaded in Electron environment');
       }
     } catch (error) {
       console.error('Error downloading report:', error);

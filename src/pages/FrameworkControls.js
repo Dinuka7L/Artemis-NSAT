@@ -4,7 +4,7 @@ import Button from '../components/Button';
 import Terminal from '../components/Terminal';
 import { AlertTriangle, Play, BookOpen } from 'lucide-react';
 
-const { ipcRenderer } = window.require('electron');
+const ipcRenderer = window.require ? window.require('electron').ipcRenderer : null;
 
 const FrameworkControls = () => {
   const [devices, setDevices] = useState([]);
@@ -110,9 +110,17 @@ const FrameworkControls = () => {
 
   const loadDevices = async () => {
     try {
-      const result = await ipcRenderer.invoke('get-devices');
-      if (result && !result.error) {
-        setDevices(result);
+      if (ipcRenderer) {
+        const result = await ipcRenderer.invoke('get-devices');
+        if (result && !result.error) {
+          setDevices(result);
+        }
+      } else {
+        // Mock data for browser environment
+        setDevices([
+          { devicename: 'Router-1', ip: '192.168.1.1', device_category: 'router' },
+          { devicename: 'Switch-1', ip: '192.168.1.2', device_category: 'switch' }
+        ]);
       }
     } catch (error) {
       console.error('Error loading devices:', error);
@@ -129,15 +137,20 @@ const FrameworkControls = () => {
       setLoading(true);
       setOutput('Applying framework-based security control...\n');
 
-      const result = await ipcRenderer.invoke('execute-python-script', 
-        'device_config/framework_controls.py', 
-        [selectedDevice, selectedControl]
-      );
+      if (ipcRenderer) {
+        const result = await ipcRenderer.invoke('execute-python-script', 
+          'device_config/framework_controls.py', 
+          [selectedDevice, selectedControl]
+        );
 
-      if (result.success) {
-        setOutput(prev => prev + result.output);
+        if (result.success) {
+          setOutput(prev => prev + result.output);
+        } else {
+          setOutput(prev => prev + `Error: ${result.error}\n`);
+        }
       } else {
-        setOutput(prev => prev + `Error: ${result.error}\n`);
+        // Mock response for browser environment
+        setOutput(prev => prev + 'Mock: Framework control would be applied in Electron environment\n');
       }
     } catch (error) {
       setOutput(prev => prev + `Error: ${error.message}\n`);
