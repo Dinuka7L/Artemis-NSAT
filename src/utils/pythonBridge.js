@@ -24,6 +24,76 @@ class PythonBridge {
     }
   }
 
+  async executeTerminalAction(action, params = {}) {
+    if (this.isElectron && this.ipcRenderer) {
+      try {
+        const result = await this.ipcRenderer.invoke('execute-terminal-action', action, params);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error: `Terminal action failed: ${error.message}`
+        };
+      }
+    } else {
+      // Mock terminal responses for browser environment
+      return this.getMockTerminalResponse(action, params);
+    }
+  }
+
+  getMockTerminalResponse(action, params) {
+    const mockResponses = {
+      connect: {
+        success: true,
+        message: `Connected to ${params.device || 'Mock Device'}`,
+        device_info: {
+          name: 'Mock Router',
+          ip: params.device || '192.168.1.1',
+          username: params.username || 'admin'
+        }
+      },
+      send_command: {
+        success: true,
+        message: `Command sent: ${params.command || 'show version'}`
+      },
+      get_output: {
+        success: true,
+        output: [
+          {
+            type: 'output',
+            data: `Mock output for command: ${params.command || 'show version'}\nCisco IOS Software, Version 15.1\nUptime: 1 day, 2 hours\n`,
+            timestamp: Date.now(),
+            time: new Date().toLocaleTimeString()
+          }
+        ]
+      },
+      enable: {
+        success: true,
+        message: 'Entered privileged EXEC mode'
+      },
+      disconnect: {
+        success: true,
+        message: 'Disconnected successfully'
+      },
+      status: {
+        success: true,
+        status: {
+          connected: true,
+          device_info: {
+            name: 'Mock Router',
+            ip: '192.168.1.1'
+          },
+          shell_active: true
+        }
+      }
+    };
+
+    return mockResponses[action] || {
+      success: false,
+      error: `Unknown terminal action: ${action}`
+    };
+  }
+
   parseScriptOutput(result) {
     if (!result.success) {
       return {

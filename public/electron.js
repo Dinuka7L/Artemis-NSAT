@@ -113,6 +113,56 @@ ipcMain.handle('execute-python-script', async (event, scriptPath, args = []) => 
   });
 });
 
+// Terminal interface handler
+ipcMain.handle('execute-terminal-action', async (event, action, params = {}) => {
+  return new Promise((resolve, reject) => {
+    const pythonPath = process.platform === 'win32' ? 'python' : 'python3';
+    const scriptPath = path.join(__dirname, '..', 'terminal_interface', 'terminal_manager.py');
+    
+    // Prepare arguments
+    const args = [action];
+    if (Object.keys(params).length > 0) {
+      args.push(JSON.stringify(params));
+    }
+    
+    const pythonProcess = spawn(pythonPath, [scriptPath, ...args], {
+      cwd: path.join(__dirname, '..')
+    });
+
+    let output = '';
+    let error = '';
+
+    pythonProcess.stdout.on('data', (data) => {
+      output += data.toString();
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+      error += data.toString();
+    });
+
+    pythonProcess.on('close', (code) => {
+      try {
+        const result = JSON.parse(output);
+        resolve(result);
+      } catch (e) {
+        resolve({
+          success: false,
+          error: `Failed to parse terminal response: ${output}`,
+          raw_output: output,
+          raw_error: error
+        });
+      }
+    });
+
+    pythonProcess.on('error', (err) => {
+      resolve({
+        success: false,
+        error: `Terminal process error: ${err.message}`
+      });
+    });
+  });
+});
+
 ipcMain.handle('get-devices', async () => {
   try {
     const result = await new Promise((resolve, reject) => {

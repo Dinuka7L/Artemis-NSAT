@@ -9,6 +9,7 @@ import FrameworkControls from './pages/FrameworkControls';
 import NetworkCompliance from './pages/NetworkCompliance';
 import Automation from './pages/Automation';
 import Reports from './pages/Reports';
+import Terminal from './pages/Terminal';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path="/network-compliance" element={<NetworkCompliance />} />
           <Route path="/automation" element={<Automation />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/terminal" element={<Terminal />} />
         </Routes>
       </Layout>
     </Router>
