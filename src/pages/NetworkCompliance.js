@@ -38,17 +38,15 @@ const NetworkCompliance = () => {
 
   const loadDevices = async () => {
     try {
-      if (ipcRenderer) {
-        const result = await ipcRenderer.invoke('get-devices');
-        if (result && !result.error) {
-          setDevices(result);
+      try {
+        const deviceList = await pythonBridge.getDevices();
+        setDevices(deviceList);
+      } catch (error) {
+        console.error('Error loading devices:', error);
+        setDevices([]);
+        if (error.message.includes('Electron environment')) {
+          alert('This application must be run in Electron environment for compliance checking');
         }
-      } else {
-        // Mock data for browser environment
-        setDevices([
-          { devicename: 'Router-1', ip: '192.168.1.1', device_category: 'router' },
-          { devicename: 'Switch-1', ip: '192.168.1.2', device_category: 'switch' }
-        ]);
       }
     } catch (error) {
       console.error('Error loading devices:', error);

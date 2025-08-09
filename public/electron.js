@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
+const os = require('os');
 
 let mainWindow;
 let pythonProcess;
@@ -58,8 +59,26 @@ app.on('activate', () => {
 // Enhanced Python bridge functions
 ipcMain.handle('execute-python-script', async (event, scriptPath, args = []) => {
   return new Promise((resolve, reject) => {
-    const pythonPath = process.platform === 'win32' ? 'python' : 'python3';
+    // Try different Python executables based on platform
+    let pythonPath;
+    if (process.platform === 'win32') {
+      pythonPath = 'python'; // Windows typically uses 'python'
+    } else {
+      pythonPath = 'python3'; // Unix-like systems prefer 'python3'
+    }
+    
     const fullScriptPath = path.join(__dirname, '..', scriptPath);
+    
+    // Check if script file exists
+    if (!fs.existsSync(fullScriptPath)) {
+      reject({
+        success: false,
+        error: `Python script not found: ${fullScriptPath}`,
+        output: '',
+        exitCode: -1
+      });
+      return;
+    }
     
     // Enhanced argument processing for configuration data
     const processedArgs = args.map(arg => {
@@ -69,8 +88,12 @@ ipcMain.handle('execute-python-script', async (event, scriptPath, args = []) => 
       return arg.toString();
     });
     
+    console.log(`Executing: ${pythonPath} ${fullScriptPath} ${processedArgs.join(' ')}`);
+    
     const pythonProcess = spawn(pythonPath, [fullScriptPath, ...processedArgs], {
-      cwd: path.join(__dirname, '..')
+      cwd: path.join(__dirname, '..'),
+      env: { ...process.env },
+      stdio: ['pipe', 'pipe', 'pipe']
     });
 
     let output = '';
@@ -78,13 +101,26 @@ ipcMain.handle('execute-python-script', async (event, scriptPath, args = []) => 
 
     pythonProcess.stdout.on('data', (data) => {
       output += data.toString();
+      console.log('Python stdout:', data.toString());
     });
 
     pythonProcess.stderr.on('data', (data) => {
       error += data.toString();
+      console.log('Python stderr:', data.toString());
+    });
+
+    pythonProcess.on('error', (err) => {
+      console.error('Python process error:', err);
+      reject({ 
+        success: false, 
+        error: `Failed to start Python process: ${err.message}. Make sure Python is installed and in PATH.`,
+        output: '',
+        exitCode: -1
+      });
     });
 
     pythonProcess.on('close', (code) => {
+      console.log(`Python process exited with code: ${code}`);
       if (code === 0) {
         resolve({ 
           success: true, 
@@ -101,23 +137,29 @@ ipcMain.handle('execute-python-script', async (event, scriptPath, args = []) => 
         });
       }
     });
-
-    pythonProcess.on('error', (err) => {
-      reject({ 
-        success: false, 
-        error: err.message,
-        output: '',
-        exitCode: -1
-      });
-    });
   });
 });
 
 // Terminal interface handler
 ipcMain.handle('execute-terminal-action', async (event, action, params = {}) => {
   return new Promise((resolve, reject) => {
-    const pythonPath = process.platform === 'win32' ? 'python' : 'python3';
+    let pythonPath;
+    if (process.platform === 'win32') {
+      pythonPath = 'python';
+    } else {
+      pythonPath = 'python3';
+    }
+    
     const scriptPath = path.join(__dirname, '..', 'terminal_interface', 'terminal_manager.py');
+    
+    // Check if script exists
+    if (!fs.existsSync(scriptPath)) {
+      resolve({
+        success: false,
+        error: `Terminal script not found: ${scriptPath}`
+      });
+      return;
+    }
     
     // Prepare arguments
     const args = [action];
@@ -125,8 +167,12 @@ ipcMain.handle('execute-terminal-action', async (event, action, params = {}) => 
       args.push(JSON.stringify(params));
     }
     
+    console.log(`Executing terminal action: ${pythonPath} ${scriptPath} ${args.join(' ')}`);
+    
     const pythonProcess = spawn(pythonPath, [scriptPath, ...args], {
-      cwd: path.join(__dirname, '..')
+      cwd: path.join(__dirname, '..'),
+      env: { ...process.env },
+      stdio: ['pipe', 'pipe', 'pipe']
     });
 
     let output = '';
@@ -134,31 +180,36 @@ ipcMain.handle('execute-terminal-action', async (event, action, params = {}) => 
 
     pythonProcess.stdout.on('data', (data) => {
       output += data.toString();
+      console.log('Terminal stdout:', data.toString());
     });
 
     pythonProcess.stderr.on('data', (data) => {
       error += data.toString();
+      console.log('Terminal stderr:', data.toString());
+    });
+
+    pythonProcess.on('error', (err) => {
+      console.error('Terminal process error:', err);
+      resolve({
+        success: false,
+        error: `Failed to start terminal process: ${err.message}`
+      });
     });
 
     pythonProcess.on('close', (code) => {
+      console.log(`Terminal process exited with code: ${code}`);
       try {
-        const result = JSON.parse(output);
+        const result = output.trim() ? JSON.parse(output) : { success: false, error: 'No output received' };
         resolve(result);
       } catch (e) {
+        console.error('Failed to parse terminal output:', e);
         resolve({
           success: false,
-          error: `Failed to parse terminal response: ${output}`,
+          error: `Failed to parse terminal response: ${e.message}`,
           raw_output: output,
           raw_error: error
         });
       }
-    });
-
-    pythonProcess.on('error', (err) => {
-      resolve({
-        success: false,
-        error: `Terminal process error: ${err.message}`
-      });
     });
   });
 });
@@ -166,11 +217,27 @@ ipcMain.handle('execute-terminal-action', async (event, action, params = {}) => 
 ipcMain.handle('get-devices', async () => {
   try {
     const result = await new Promise((resolve, reject) => {
-      const pythonPath = process.platform === 'win32' ? 'python' : 'python3';
+      let pythonPath;
+      if (process.platform === 'win32') {
+        pythonPath = 'python';
+      } else {
+        pythonPath = 'python3';
+      }
+      
       const scriptPath = path.join(__dirname, '..', 'python_bridge', 'device_manager.py');
       
+      // Check if script exists
+      if (!fs.existsSync(scriptPath)) {
+        reject({ error: `Device manager script not found: ${scriptPath}` });
+        return;
+      }
+      
+      console.log(`Getting devices: ${pythonPath} ${scriptPath} list_devices`);
+      
       const pythonProcess = spawn(pythonPath, [scriptPath, 'list_devices'], {
-        cwd: path.join(__dirname, '..')
+        cwd: path.join(__dirname, '..'),
+        env: { ...process.env },
+        stdio: ['pipe', 'pipe', 'pipe']
       });
 
       let output = '';
@@ -178,22 +245,31 @@ ipcMain.handle('get-devices', async () => {
 
       pythonProcess.stdout.on('data', (data) => {
         output += data.toString();
+        console.log('Device manager stdout:', data.toString());
       });
 
       pythonProcess.stderr.on('data', (data) => {
         error += data.toString();
+        console.log('Device manager stderr:', data.toString());
+      });
+
+      pythonProcess.on('error', (err) => {
+        console.error('Device manager process error:', err);
+        reject({ error: `Failed to start device manager: ${err.message}` });
       });
 
       pythonProcess.on('close', (code) => {
+        console.log(`Device manager process exited with code: ${code}`);
         if (code === 0) {
           try {
-            const devices = JSON.parse(output);
+            const devices = output.trim() ? JSON.parse(output) : [];
             resolve(devices);
           } catch (e) {
+            console.error('Failed to parse device data:', e);
             reject({ error: 'Failed to parse device data' });
           }
         } else {
-          reject({ error });
+          reject({ error: error || 'Device manager script failed' });
         }
       });
     });
@@ -207,11 +283,27 @@ ipcMain.handle('get-devices', async () => {
 ipcMain.handle('save-device', async (event, deviceData) => {
   try {
     const result = await new Promise((resolve, reject) => {
-      const pythonPath = process.platform === 'win32' ? 'python' : 'python3';
+      let pythonPath;
+      if (process.platform === 'win32') {
+        pythonPath = 'python';
+      } else {
+        pythonPath = 'python3';
+      }
+      
       const scriptPath = path.join(__dirname, '..', 'python_bridge', 'device_manager.py');
       
+      // Check if script exists
+      if (!fs.existsSync(scriptPath)) {
+        reject({ success: false, error: `Device manager script not found: ${scriptPath}` });
+        return;
+      }
+      
+      console.log(`Saving device: ${pythonPath} ${scriptPath} save_device`);
+      
       const pythonProcess = spawn(pythonPath, [scriptPath, 'save_device', JSON.stringify(deviceData)], {
-        cwd: path.join(__dirname, '..')
+        cwd: path.join(__dirname, '..'),
+        env: { ...process.env },
+        stdio: ['pipe', 'pipe', 'pipe']
       });
 
       let output = '';
@@ -219,17 +311,25 @@ ipcMain.handle('save-device', async (event, deviceData) => {
 
       pythonProcess.stdout.on('data', (data) => {
         output += data.toString();
+        console.log('Save device stdout:', data.toString());
       });
 
       pythonProcess.stderr.on('data', (data) => {
         error += data.toString();
+        console.log('Save device stderr:', data.toString());
+      });
+
+      pythonProcess.on('error', (err) => {
+        console.error('Save device process error:', err);
+        reject({ success: false, error: `Failed to start save device process: ${err.message}` });
       });
 
       pythonProcess.on('close', (code) => {
+        console.log(`Save device process exited with code: ${code}`);
         if (code === 0) {
-          resolve({ success: true, message: output });
+          resolve({ success: true, message: output.trim() || 'Device saved successfully' });
         } else {
-          reject({ success: false, error });
+          reject({ success: false, error: error || 'Failed to save device' });
         }
       });
     });

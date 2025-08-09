@@ -25,11 +25,20 @@ const DeviceManagement = () => {
   const loadDevices = async () => {
     try {
       setLoading(true);
-      const deviceList = await pythonBridge.getDevices();
-      setDevices(deviceList);
+      try {
+        const deviceList = await pythonBridge.getDevices();
+        setDevices(deviceList);
+      } catch (error) {
+        console.error('Error loading devices:', error);
+        setDevices([]);
+        if (error.message.includes('Electron environment')) {
+          alert('This application must be run in Electron environment to manage devices');
+        } else {
+          alert('Failed to load devices: ' + error.message);
+        }
+      }
     } catch (error) {
       console.error('Error loading devices:', error);
-      setDevices([]);
     } finally {
       setLoading(false);
     }

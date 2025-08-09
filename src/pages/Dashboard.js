@@ -34,13 +34,21 @@ const Dashboard = () => {
   const loadDevices = async () => {
     try {
       setLoading(true);
-      const deviceList = await pythonBridge.getDevices();
-      setDevices(deviceList);
-      calculateStats(deviceList);
+      try {
+        const deviceList = await pythonBridge.getDevices();
+        setDevices(deviceList);
+        calculateStats(deviceList);
+      } catch (error) {
+        console.error('Error loading devices:', error);
+        setDevices([]);
+        calculateStats([]);
+        // Show user-friendly error message
+        if (error.message.includes('Electron environment')) {
+          console.warn('Running in browser mode - device functionality limited');
+        }
+      }
     } catch (error) {
       console.error('Error loading devices:', error);
-      setDevices([]);
-      calculateStats([]);
     } finally {
       setLoading(false);
     }
